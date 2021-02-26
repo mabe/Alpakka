@@ -1,45 +1,47 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.ServiceBus.Messaging;
+using Azure.Messaging.ServiceBus;
 
 namespace Akka.Streams.Azure.ServiceBus
 {
     internal interface IBusClient
     {
-        Task<IEnumerable<BrokeredMessage>> ReceiveBatchAsync(int messageCount, TimeSpan serverWaitTime);
+        Task<IReadOnlyList<ServiceBusReceivedMessage>> ReceiveBatchAsync(int messageCount, TimeSpan serverWaitTime);
 
-        Task SendBatchAsync(IEnumerable<BrokeredMessage> messages);
+        Task SendBatchAsync(IEnumerable<ServiceBusMessage> messages);
     }
     
     internal sealed class QueueClientWrapper : IBusClient
     {
-        private readonly QueueClient _client;
+        private readonly ServiceBusSender _sender;
+        private readonly ServiceBusReceiver _receiver;
 
-        public QueueClientWrapper(QueueClient client)
+        public QueueClientWrapper(ServiceBusSender sender, ServiceBusReceiver receiver)
         {
-            _client = client;
+            _sender = sender;
+            _receiver = receiver;
         }
 
-        public Task<IEnumerable<BrokeredMessage>> ReceiveBatchAsync(int messageCount, TimeSpan serverWaitTime)
-            => _client.ReceiveBatchAsync(messageCount, serverWaitTime);
+        public Task<IReadOnlyList<ServiceBusReceivedMessage>> ReceiveBatchAsync(int messageCount, TimeSpan serverWaitTime)
+            => _receiver.ReceiveMessagesAsync(messageCount, serverWaitTime);
 
-        public Task SendBatchAsync(IEnumerable<BrokeredMessage> messages) => _client.SendBatchAsync(messages);
+        public Task SendBatchAsync(IEnumerable<ServiceBusMessage> messages) => _sender.SendMessagesAsync(messages);
     }
 
     internal sealed class SubscriptionClientWrapper : IBusClient
     {
-        private readonly SubscriptionClient _client;
+        private readonly ServiceBusReceiver _client;
 
-        public SubscriptionClientWrapper(SubscriptionClient client)
+        public SubscriptionClientWrapper(ServiceBusReceiver client)
         {
             _client = client;
         }
 
-        public Task<IEnumerable<BrokeredMessage>> ReceiveBatchAsync(int messageCount, TimeSpan serverWaitTime)
-            => _client.ReceiveBatchAsync(messageCount, serverWaitTime);
+        public Task<IReadOnlyList<ServiceBusReceivedMessage>> ReceiveBatchAsync(int messageCount, TimeSpan serverWaitTime)
+            => _client.ReceiveMessagesAsync(messageCount, serverWaitTime);
 
-        public Task SendBatchAsync(IEnumerable<BrokeredMessage> messages)
+        public Task SendBatchAsync(IEnumerable<ServiceBusMessage> messages)
         {
             throw new NotImplementedException();
         }
@@ -47,18 +49,18 @@ namespace Akka.Streams.Azure.ServiceBus
 
     internal sealed class TopicClientWrapper : IBusClient
     {
-        private readonly TopicClient _client;
+        private readonly ServiceBusSender _client;
 
-        public TopicClientWrapper(TopicClient client)
+        public TopicClientWrapper(ServiceBusSender client)
         {
             _client = client;
         }
 
-        public Task<IEnumerable<BrokeredMessage>> ReceiveBatchAsync(int messageCount, TimeSpan serverWaitTime)
+        public Task<IReadOnlyList<ServiceBusReceivedMessage>> ReceiveBatchAsync(int messageCount, TimeSpan serverWaitTime)
         {
             throw new NotImplementedException();
         }
 
-        public Task SendBatchAsync(IEnumerable<BrokeredMessage> messages) => _client.SendBatchAsync(messages);
+        public Task SendBatchAsync(IEnumerable<ServiceBusMessage> messages) => _client.SendMessagesAsync(messages);
     }
 }
